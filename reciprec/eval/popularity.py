@@ -6,6 +6,8 @@ from pathlib import Path
 
 from pyspark.sql import SparkSession, Window, functions as F
 
+from reciprec.eval.metrics import exposure_gini
+
 
 def reciprocal_candidates(test):
     reverse = test.select(
@@ -14,19 +16,6 @@ def reciprocal_candidates(test):
     return test.join(reverse, ["src", "dst"]).select(
         "src", "dst", (F.col("liked") * F.col("reverse_liked")).alias("mutual_like")
     )
-
-
-def exposure_gini(histogram):
-    population = sum(histogram.values())
-    impressions = sum(exposure * count for exposure, count in histogram.items())
-    if not impressions:
-        return 0.0
-    weighted_ranks = 0
-    preceding = 0
-    for exposure, count in sorted(histogram.items()):
-        weighted_ranks += exposure * count * (2 * preceding + count + 1)
-        preceding += count
-    return (weighted_ranks - (population + 1) * impressions) / (population * impressions)
 
 
 def evaluate(test, features, k=10):

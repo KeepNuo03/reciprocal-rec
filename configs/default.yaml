@@ -21,3 +21,11 @@ retrieval:
   hnsw_m: 32
   ef_construction: 120
   ef_search: 256
+
+ranking:
+  learning_rate: 0.08
+  num_leaves: 31
+  rounds: 150
+  patience: 12
+  k: 10
+  alpha: 0.3

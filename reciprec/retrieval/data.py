@@ -18,7 +18,12 @@ def read_users(path):
     genders = users["gender"].to_numpy()[order]
     if len(ids) == 0 or np.any(ids[1:] == ids[:-1]) or not np.isin(genders, ["F", "M"]).all():
         raise ValueError("Expected a nonempty user table with unique IDs and F/M genders")
-    features = np.column_stack([users[name].to_numpy() for name in FEATURES]).astype(np.float32)
+    features = np.column_stack([users[name].to_numpy() for name in FEATURES])
+    return ids, genders.astype("U1"), scale_features(features)[order]
+
+
+def scale_features(raw_features):
+    features = raw_features.astype(np.float32, copy=True)
     features[:, :2] = np.log1p(features[:, :2])
     # Compute scaling from users with observed training statistics for each feature.
     for column in features.T:
@@ -27,16 +32,20 @@ def read_users(path):
             values = column[observed]
             column[observed] = (values - values.mean()) / max(float(values.std()), 1e-6)
         column[~observed] = 0
-    return ids, genders.astype("U1"), features[order]
+    return features
 
 
 def read_edges(path, ids):
     edges = pq.read_table(path, columns=["src", "dst", "liked"])
+    return edge_rows(edges, ids), edges["liked"].to_numpy() == 1
+
+
+def edge_rows(edges, ids):
     endpoints = np.column_stack([edges[name].to_numpy() for name in ("src", "dst")])
     rows = np.searchsorted(ids, endpoints)
     if (rows >= len(ids)).any() or not np.array_equal(ids[rows], endpoints):
-        raise ValueError(f"Found edge endpoints missing from the user table in {path}")
-    return rows.astype(np.int32), edges["liked"].to_numpy() == 1
+        raise ValueError("Found edge endpoints missing from the user table")
+    return rows.astype(np.int32)
 
 
 def group_targets(edges, user_count):

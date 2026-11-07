@@ -56,7 +56,7 @@ After preprocessing, install the retrieval dependencies and run training. The fi
 python -m pip install torch==2.8.0 --index-url https://download.pytorch.org/whl/cpu
 python -m pip install -e '.[data,retrieval,test]'
 python -m reciprec.retrieval.train --device cpu
-python -m pytest
+python -m pytest tests/test_retrieval.py
 ```
 
 Validation uses exact inner-product retrieval on a fixed sample of eligible users to select the best checkpoint. Test evaluation uses HNSW over the full eligible candidate catalog, with separate indexes for `F` and `M`. The dataset lacks preference settings, so this experiment assumes opposite-gender eligibility. Recall@200 averages the per-user fraction of eligible held-out likes retrieved, over users with at least one such like. Self matches and candidates the user rated in training are excluded from search. An audit compares HNSW with exact top-200 for the same vectors, queries, and eligibility rules. [FAISS HNSW index documentation](https://github.com/facebookresearch/faiss/wiki/Faiss-indexes#indexhnsw-variants)
@@ -74,3 +74,34 @@ The CPU run used 1,367,731 positive training edges. Epoch 8 had the best validat
 | Validation Recall@200, exact search | 2,000 | 52.44% |
 | Test Recall@200, HNSW | 35,034 | 51.89% |
 | HNSW overlap with exact top 200, test audit | 1,000 | 99.28% |
+
+## Reciprocal ranking
+
+After running two-tower retrieval, train one LightGBM binary classifier and apply it to each pair in both directions. Ranking inputs include training-derived user statistics, directional tower scores, user-statistic differences, and the gender combination.
+
+```sh
+python -m pip install -e '.[data,retrieval,ranking,test]'
+python -m reciprec.ranking.ranker --device cpu
+python -m pytest
+```
+
+The ranker uses two seeded folds of unordered pairs inside the training split. Both directions stay together. Each fold's scores and user statistics come from the other fold, so the ranker cannot use features computed from its own training labels for the same pair. Validation and test features use the full-training catalog and tower vectors. Each query's tower scores are standardized against its catalog score distribution to align the scales of independently trained towers. This preserves the two-tower baseline ordering within each query. The validation AUC selects the LightGBM iteration. [LightGBM training API](https://lightgbm.readthedocs.io/en/stable/pythonapi/lightgbm.train.html)
+
+The report compares six methods on the same test pool of reciprocally rated pairs used for the popularity baseline. This pool includes all observed gender combinations. The product and harmonic mean combine the two directional model outputs. The product is a ranking score and does not model the joint probability explicitly. The exposure penalty divides the product by `(training_likes_received + 1)^0.3`. The report also gives directed AUC on all rated test edges and separately for F→M and M→F.
+
+The command writes `results/ranking.json` and saves the fitted booster in `artifacts/ranking/ranker.txt`. For another run, choose fresh `--artifacts` and `--report` paths, and use the retrieval artifacts produced from the same prepared data.
+
+### LibimSeTi ranking results
+
+The CPU run used 4,750,906 cross-fitted training examples. The best validation AUC was 0.91567 at the 150-round budget. Test AUC was 0.91541 overall, 0.91304 for F→M, and 0.91238 for M→F.
+
+| Method | Mutual-Hit@10 | NDCG@10 | Exposure Gini | Coverage |
+| --- | ---: | ---: | ---: | ---: |
+| Popularity | 58.69% | 0.56826 | 0.89704 | 18.83% |
+| Two-tower | 58.68% | 0.56798 | 0.89647 | 18.88% |
+| One-way LightGBM | 58.69% | 0.57517 | 0.89484 | 19.03% |
+| Reciprocal harmonic mean | 58.68% | 0.57610 | 0.89528 | 18.98% |
+| Reciprocal product | 58.68% | 0.57613 | 0.89534 | 18.97% |
+| Reciprocal product with exposure penalty | 58.69% | 0.57524 | 0.89217 | 19.25% |
+
+The product increased NDCG@10 by 0.00096 over the one-way ranker and yielded one fewer hit among the 9,960 evaluated users. The short candidate lists leave little headroom in Mutual-Hit@10. At the fixed penalty of 0.3, exposure Gini decreased from 0.89534 to 0.89217 and NDCG@10 decreased to 0.57524.
