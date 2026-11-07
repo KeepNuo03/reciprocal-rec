@@ -139,7 +139,7 @@ def main():
     try:
         with TemporaryDirectory(prefix=".reciprec-", dir=output.parent) as directory:
             staging = Path(directory)
-            spark.sparkContext.setCheckpointDir((staging / "checkpoints").as_uri())
+            spark.sparkContext.setCheckpointDir(str(staging / "checkpoints"))
             prepare(spark, args.raw.resolve(), staging / "prepared", config)
             (staging / "prepared").rename(output)
     finally:

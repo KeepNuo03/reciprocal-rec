@@ -1,3 +1,6 @@
+import json
+import subprocess
+import sys
 from math import log2
 from zipfile import ZipFile
 
@@ -87,3 +90,24 @@ def test_popularity_metrics(spark):
     result = evaluate(test, features, k=2)
     assert result["mutual_hit@2"] == pytest.approx(2 / 3)
     assert result["ndcg@2"] == pytest.approx((1 + 1 / log2(3)) / 3)
+
+
+def test_prepare_with_non_ascii_paths(tmp_path):
+    work = tmp_path / "用户 数据"
+    work.mkdir()
+    (work / "ratings.dat").write_text("1,2,9\n2,1,8\n2,3,7\n", encoding="utf-8")
+    (work / "gender.dat").write_text("1,F\n2,M\n3,F\n", encoding="utf-8")
+    config = work / "config.yaml"
+    settings = {
+        "preprocessing": {"min_ratings_given": 1, "min_ratings_received": 1, "like_threshold": 8},
+        "split": {"train": 0.8, "validation": 0.1, "test": 0.1, "seed": 42},
+    }
+    config.write_text(json.dumps(settings), encoding="utf-8")
+    output = work / "prepared"
+    command = [
+        sys.executable, "-m", "reciprec.data.prepare", "--raw", str(work),
+        "--output", str(output), "--config", str(config),
+    ]
+    subprocess.run(command, check=True)
+    summary = json.loads((output / "summary.json").read_text(encoding="utf-8"))
+    assert summary["rating_histogram"] == {"8": 1, "9": 1}
