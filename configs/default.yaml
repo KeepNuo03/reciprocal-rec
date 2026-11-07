@@ -8,3 +8,16 @@ split:
   validation: 0.10
   test: 0.10
   seed: 42
+
+retrieval:
+  dimension: 64
+  batch_size: 512
+  learning_rate: 0.002
+  epochs: 8
+  patience: 2
+  validation_queries: 2000
+  index_audit_queries: 1000
+  k: 200
+  hnsw_m: 32
+  ef_construction: 120
+  ef_search: 256

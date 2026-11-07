@@ -27,7 +27,7 @@ python -m pip install -e '.[data,test]'
 python -m reciprec.data.download --archive /path/to/libimseticomplete.zip
 python -m reciprec.data.prepare
 python -m reciprec.eval.popularity
-python -m pytest
+python -m pytest tests/test_phase1.py
 ```
 
 For an authorized HTTPS source, pass `--url` in place of `--archive`. If you already have both files under `data/raw/`, start with `prepare`. The importer and preprocessor expect fresh output directories. To rerun preprocessing with different settings, pass a new `--output` to `prepare` and point `popularity --prepared` to it.
@@ -45,3 +45,32 @@ The baseline writes `results/popularity.json`. It ranks candidates by training l
 | Popularity | 58.69% | 0.5683 | 0.8970 | 18.83% |
 
 The test pool has 11,571 reciprocally rated pairs across 9,960 users, including 7,295 mutual likes. The median user has one candidate, and 97.63% of evaluated users have at most 10. The maximum achievable Mutual-Hit@10 in this pool is 58.73%, the share of users with at least one mutual like. Popularity is 0.04 percentage points below that ceiling, so this metric leaves little room to separate rankers under the known-label candidate protocol.
+
+## Two-tower retrieval
+
+The source and candidate towers each combine a user ID embedding with six training-only user statistics to produce a 64-dimensional vector. Training uses positive edges from `train`. Other targets in each batch serve as implicit negatives. Repeated target IDs share a logit, and logQ subtracts the log of each target's estimated batch inclusion probability to account for frequent targets appearing in more batches.
+
+After preprocessing, install the retrieval dependencies and run training. The first command selects a CPU-only PyTorch wheel for the WSL setup. [PyTorch installation guide](https://pytorch.org/get-started/locally/)
+
+```sh
+python -m pip install torch==2.8.0 --index-url https://download.pytorch.org/whl/cpu
+python -m pip install -e '.[data,retrieval,test]'
+python -m reciprec.retrieval.train --device cpu
+python -m pytest
+```
+
+Validation uses exact inner-product retrieval on a fixed sample of eligible users to select the best checkpoint. Test evaluation uses HNSW over the full eligible candidate catalog, with separate indexes for `F` and `M`. The dataset lacks preference settings, so this experiment assumes opposite-gender eligibility. Recall@200 averages the per-user fraction of eligible held-out likes retrieved, over users with at least one such like. Self matches and candidates the user rated in training are excluded from search. An audit compares HNSW with exact top-200 for the same vectors, queries, and eligibility rules. [FAISS HNSW index documentation](https://github.com/facebookresearch/faiss/wiki/Faiss-indexes#indexhnsw-variants)
+
+Direct inner-product HNSW had poor agreement with exact search on the learned vectors. The index adds one coordinate to each candidate to make all squared norms equal within its partition, and adds zero to each query. Squared Euclidean distance then differs from negative twice the original dot product by a constant for each query. The model vectors remain 64-dimensional, and the graph stores 65-dimensional vectors. Search expands when filtering leaves too few candidates and falls back to exact scoring if it reaches the full partition. [FAISS notes on mapping inner product to L2](https://github.com/facebookresearch/faiss/wiki/MetricType-and-distances#how-can-i-do-max-inner-product-search-on-indexes-that-support-only-l2)
+
+The command writes `results/retrieval.json` and saves the model weights, both embedding tables, and FAISS indexes under `artifacts/retrieval/`. For another run, choose fresh `--artifacts` and `--report` paths.
+
+### LibimSeTi retrieval results
+
+The CPU run used 1,367,731 positive training edges. Epoch 8 had the best validation Recall@200 within the eight-epoch budget.
+
+| Evaluation | Queries | Result |
+| --- | ---: | ---: |
+| Validation Recall@200, exact search | 2,000 | 52.44% |
+| Test Recall@200, HNSW | 35,034 | 51.89% |
+| HNSW overlap with exact top 200, test audit | 1,000 | 99.28% |
