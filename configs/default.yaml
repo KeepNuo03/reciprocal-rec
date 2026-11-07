@@ -1,7 +1,7 @@
 preprocessing:
   min_ratings_given: 10
   min_ratings_received: 10
-  like_threshold: 8
+  like_threshold: 9
 
 split:
   train: 0.80

@@ -16,7 +16,11 @@ Prepare LibimSeTi ratings locally, split by unordered user pair, compute user fe
 
 Use Python 3.11 or 3.12 and a JDK supported by [PySpark 3.5.8](https://spark.apache.org/docs/3.5.8/api/python/getting_started/install.html), such as Java 17. Set `JAVA_HOME` to the JDK. On Windows, run in WSL with Python and Java installed inside WSL, or use native Hadoop binaries compatible with the Hadoop version bundled with Spark.
 
-Obtain an authorized copy of the original LibimSeTi ZIP containing the headerless `ratings.dat` (`UserID,ProfileID,Rating`) and `gender.dat` (`UserID,Gender`) files. The historical download links were unavailable during development. The [Netzschleuder listing](https://networks.skewed.de/net/libimseti) documents the ratings graph and lists edge weights as its only property. See the [original study](https://arxiv.org/abs/cs/0703042) and the [dataset's usage terms and format](https://github.com/ChicagoBoothML/DATA___DatingAgency/blob/master/readme.txt). Keep the data local for research use and obtain permission before redistributing it.
+Download the archived copy of the original LibimSeTi ZIP. It contains the headerless `ratings.dat` (`UserID,ProfileID,Rating`) and `gender.dat` (`UserID,Gender`) files in a shared user ID space. [Archived original ZIP](https://web.archive.org/web/20151130002651id_/http://www.occamslab.com/petricek/data/libimseti-complete.zip)
+
+The archive used for the baseline has SHA-256 `83a2f3fcb80c2c6af8fe286044dffca27d886507461cef4dd5b1b885522a2577`. Its 17,359,346 ratings reference 135,359 raters and 168,791 rated profiles, all present among the 220,970 user IDs in `gender.dat`.
+
+Keep the data local for research use and obtain permission before redistributing it. Cite Brožovský and Petříček (2007) when publishing results. [Original study](https://arxiv.org/abs/cs/0703042) · [Archived dataset page and usage terms](https://web.archive.org/web/20200901085122/http://www.occamslab.com/petricek/data/)
 
 ```sh
 python -m pip install -e '.[data,test]'
@@ -28,6 +32,16 @@ python -m pytest
 
 For an authorized HTTPS source, pass `--url` in place of `--archive`. If you already have both files under `data/raw/`, start with `prepare`. The importer and preprocessor expect fresh output directories. To rerun preprocessing with different settings, pass a new `--output` to `prepare` and point `popularity --prepared` to it.
 
-Preprocessing excludes self-ratings, users without known gender, and out-of-range ratings. Duplicate directed ratings retain the highest score. It writes `train`, `val`, `test`, and `user_features` Parquet datasets under `data/prepared/`. The fixed-seed hash split targets 80/10/10 by unordered pair because the source lacks timestamps. `data/prepared/summary.json` records the retained score histogram and positive rate. The degree and like thresholds in `configs/default.yaml` are provisional.
+Preprocessing excludes self-ratings, users without known gender, and out-of-range ratings. Duplicate directed ratings retain the highest score. It writes `train`, `val`, `test`, and `user_features` Parquet datasets under `data/prepared/`. The fixed-seed hash split targets 80/10/10 by unordered pair because the source lacks timestamps. `data/prepared/summary.json` records the retained score histogram and positive rate.
 
-The baseline writes `results/popularity.json`. It ranks candidates by training likes received, breaking ties by candidate ID. Candidates come from test pairs with ratings in both directions. Mutual-Hit@10 and NDCG@10 average over users with at least one such candidate, including users with no mutual likes as zeros. Coverage and exposure Gini use all retained users, including those who receive no exposure. This protocol measures re-ranking of known-label candidates. Real-data metrics are pending.
+The directed k-core with at least 10 ratings given and 10 received retains 49,780 users and 5,938,610 ratings. The resulting train, validation, and test splits contain 4,750,906, 594,354, and 593,350 directed ratings. A score of 9 or 10 is a like. This cutoff labels 28.79% of training ratings positive, compared with 38.62% for a cutoff of 8 and 22.12% for a cutoff of 10.
+
+### LibimSeTi baseline
+
+The baseline writes `results/popularity.json`. It ranks candidates by training likes received, breaking ties by candidate ID. Candidates come from test pairs with ratings in both directions. Mutual-Hit@10 and NDCG@10 average over users with at least one such candidate, including users with no mutual likes as zeros. Coverage and exposure Gini use all retained users, including those who receive no exposure.
+
+| Method | Mutual-Hit@10 | NDCG@10 | Exposure Gini | Coverage |
+| --- | ---: | ---: | ---: | ---: |
+| Popularity | 58.69% | 0.5683 | 0.8970 | 18.83% |
+
+The test pool has 11,571 reciprocally rated pairs across 9,960 users, including 7,295 mutual likes. The median user has one candidate, and 97.63% of evaluated users have at most 10. The maximum achievable Mutual-Hit@10 in this pool is 58.73%, the share of users with at least one mutual like. Popularity is 0.04 percentage points below that ceiling, so this metric leaves little room to separate rankers under the known-label candidate protocol.
