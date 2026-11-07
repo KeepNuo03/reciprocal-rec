@@ -1,0 +1,10 @@
+preprocessing:
+  min_ratings_given: 10
+  min_ratings_received: 10
+  like_threshold: 8
+
+split:
+  train: 0.80
+  validation: 0.10
+  test: 0.10
+  seed: 42
