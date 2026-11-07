@@ -11,6 +11,7 @@ requires-python = ">=3.11"
 
 [project.optional-dependencies]
 data = ["pyspark==3.5.8", "PyYAML>=6,<7"]
+retrieval = ["torch>=2.8,<3", "faiss-cpu>=1.10,<2", "numpy>=1.25,<3", "pyarrow>=18,<25", "PyYAML>=6,<7"]
 test = ["pytest>=8,<10"]
 
 [tool.setuptools.packages.find]
