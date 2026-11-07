@@ -9,5 +9,9 @@ description = "Reciprocal recommendation for two-sided markets"
 readme = "README.md"
 requires-python = ">=3.11"
 
+[project.optional-dependencies]
+data = ["pyspark==3.5.8", "PyYAML>=6,<7"]
+test = ["pytest>=8,<10"]
+
 [tool.setuptools.packages.find]
 include = ["reciprec", "reciprec.*"]
