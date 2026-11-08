@@ -16,7 +16,10 @@ ranking = ["lightgbm>=4.7,<5", "scipy>=1.12,<2"]
 analysis = ["matplotlib>=3.9,<4"]
 serving = ["fastapi>=0.115,<1", "uvicorn>=0.30,<1", "faiss-cpu>=1.10,<2", "numpy>=1.25,<3", "pyarrow>=18,<25", "PyYAML>=6,<7", "lightgbm>=4.7,<5"]
 http-test = ["httpx>=0.27,<1"]
-test = ["pytest>=8,<10"]
+test = ["pytest>=8,<10", "ruff>=0.11,<1"]
 
 [tool.setuptools.packages.find]
 include = ["reciprec", "reciprec.*"]
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F", "I"]

@@ -4,7 +4,8 @@ import argparse
 import json
 from pathlib import Path
 
-from pyspark.sql import SparkSession, Window, functions as F
+from pyspark.sql import SparkSession, Window
+from pyspark.sql import functions as F
 
 from reciprec.eval.metrics import exposure_gini
 

@@ -6,7 +6,6 @@ import numpy as np
 
 from reciprec.retrieval.data import FEATURES
 
-
 FEATURE_NAMES = (
     *(f"src_{name}" for name in FEATURES),
     *(f"dst_{name}" for name in FEATURES),
