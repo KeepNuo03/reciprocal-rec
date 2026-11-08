@@ -11,7 +11,8 @@ import yaml
 from reciprec.eval.ranking import ranking_metrics, reciprocal_rows
 from reciprec.fusion import penalize
 from reciprec.pipeline import score_pairs
-from reciprec.ranking.ranker import load_full_catalog, read_training
+from reciprec.ranking.features import load_full_catalog
+from reciprec.ranking.ranker import read_training
 from reciprec.retrieval.data import read_edges
 
 
