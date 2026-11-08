@@ -3,7 +3,6 @@
 import numpy as np
 import pyarrow.parquet as pq
 
-
 FEATURES = (
     "ratings_given", "ratings_received", "mean_rating_given", "mean_rating_received",
     "like_rate_given", "like_rate_received",

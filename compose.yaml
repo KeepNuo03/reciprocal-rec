@@ -4,9 +4,10 @@ services:
     ports:
       - "127.0.0.1:8000:8000"
     volumes:
-      - ./data/prepared:/app/data/prepared:ro
-      - ./artifacts/retrieval:/app/artifacts/retrieval:ro
-      - ./artifacts/ranking:/app/artifacts/ranking:ro
+      - "${RECIPREC_RUN_DIR:-.}/data/prepared:/app/data/prepared:ro"
+      - "${RECIPREC_RUN_DIR:-.}/artifacts/retrieval:/app/artifacts/retrieval:ro"
+      - "${RECIPREC_RUN_DIR:-.}/artifacts/ranking:/app/artifacts/ranking:ro"
+      - "${RECIPREC_RUN_DIR:-.}/configs/default.yaml:/app/configs/default.yaml:ro"
     healthcheck:
       test: ["CMD", "python", "-c", "from urllib.request import urlopen; urlopen('http://127.0.0.1:8000/health', timeout=2)"]
       interval: 5s

@@ -14,10 +14,19 @@ import yaml
 
 from reciprec.eval.ranking import evaluate
 from reciprec.ranking.features import (
-    FEATURE_NAMES, FeatureCatalog, load_full_catalog, pair_folds, user_statistics,
+    FEATURE_NAMES,
+    FeatureCatalog,
+    load_full_catalog,
+    pair_folds,
+    user_statistics,
 )
 from reciprec.retrieval.data import (
-    edge_rows, evaluation_targets, group_targets, read_edges, read_users, scale_features,
+    edge_rows,
+    evaluation_targets,
+    group_targets,
+    read_edges,
+    read_users,
+    scale_features,
 )
 from reciprec.retrieval.two_tower import train_model
 

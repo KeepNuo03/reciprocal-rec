@@ -10,7 +10,12 @@ import numpy as np
 import torch
 import yaml
 
-from reciprec.retrieval.data import evaluation_targets, group_targets, read_edges, read_users
+from reciprec.retrieval.data import (
+    evaluation_targets,
+    group_targets,
+    read_edges,
+    read_users,
+)
 from reciprec.retrieval.index import CandidateIndexes
 from reciprec.retrieval.two_tower import macro_recall, sample_queries, train_model
 

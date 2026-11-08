@@ -4,7 +4,12 @@ import pytest
 from reciprec.eval.ranking import auc, ranking_metrics, reciprocal_rows
 from reciprec.fusion import fuse
 from reciprec.pipeline import score_pairs
-from reciprec.ranking.features import FEATURE_NAMES, FeatureCatalog, pair_folds, user_statistics
+from reciprec.ranking.features import (
+    FEATURE_NAMES,
+    FeatureCatalog,
+    pair_folds,
+    user_statistics,
+)
 
 
 def test_fold_keeps_both_directions_together():

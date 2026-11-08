@@ -5,10 +5,16 @@ from math import log2
 from zipfile import ZipFile
 
 import pytest
-from pyspark.sql import SparkSession, functions as F
+from pyspark.sql import SparkSession
+from pyspark.sql import functions as F
 
 from reciprec.data.download import extract_inputs
-from reciprec.data.prepare import assign_splits, directed_core, eligible_ratings, user_features
+from reciprec.data.prepare import (
+    assign_splits,
+    directed_core,
+    eligible_ratings,
+    user_features,
+)
 from reciprec.eval.popularity import evaluate
 
 

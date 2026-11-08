@@ -1,8 +1,32 @@
 # reciprocal-rec
 
-An experimental two-sided recommender for reciprocal matches. Given a user A, the system will retrieve candidates B, score both A's interest in B and B's interest in A, and rank candidates by their combined scores.
+An experimental two-sided recommender for reciprocal matches on LibimSeTi. It retrieves candidates with a PyTorch two-tower model and FAISS HNSW, then ranks them with a shared LightGBM classifier applied in both directions.
 
-## First milestone
+```text
+LibimSeTi ZIP -> Spark preparation -> two-tower training -> cross-fitted LightGBM
+                                                            |
+User -> HNSW top 200 -> directed scores -> reciprocal fusion and penalty -> top 10
+```
+
+On the known-label test pool, reciprocal product improved NDCG@10 from 0.57517 to 0.57613 versus one-way ranking and recorded one fewer Mutual-Hit@10. The Docker service completed the local sequential benchmark at 4.94 ms HTTP p50 and 9.94 ms p99.
+
+## Reproduce the offline experiment
+
+Use Python 3.12 and Java 17. On Windows, run the offline pipeline in WSL. Obtain the original archive from the data source below, then run from the repository root.
+
+```sh
+python -m pip install torch==2.8.0 --index-url https://download.pytorch.org/whl/cpu
+python -m pip install -e '.[data,retrieval,ranking,analysis]'
+python -m reciprec.run --archive /path/to/libimseti-complete.zip
+```
+
+The command imports the ZIP, prepares Parquet, trains both models, and generates the baseline, retrieval, ranking, and exposure reports and plot. The default run directory is `results/run`. It contains the inputs, prepared data, model artifacts, configuration snapshot, and a `results/` subdirectory for the reports. Use `--output` to choose another fresh directory. `make all ARCHIVE=/path/to/libimseti-complete.zip` runs the same command.
+
+To serve that run, set `RECIPREC_RUN_DIR=./results/run` in your shell and use the Compose instructions below. Point the host benchmark at `--embeddings results/run/artifacts/retrieval/embeddings.npz`.
+
+GitHub Actions runs Ruff, pytest, and a synthetic archive-to-API smoke test on pull requests and pushes to `main`. The workflow uses generated ratings and checks that the service loads and uses the artifacts produced by the one-command run.
+
+## Data and preprocessing
 
 Prepare LibimSeTi ratings locally, split by unordered user pair, compute user features from the training split, and report a popularity baseline on held-out pairs with ratings in both directions.
 
@@ -167,3 +191,10 @@ The report is written to `results/serving.json`. This Windows host to Docker Des
 | ranking | 1.79 | 2.50 |
 
 For local service tests, install `.[serving,http-test,test]` and run `python -m pytest tests/test_serving.py`.
+
+## Design walkthrough
+
+- **Why split by user pair?** Each pair has up to two directed ratings. Grouping them in both the outer split and the ranking folds keeps a held-out rating and its reverse together. Each ranking training row uses statistics and tower scores generated from the opposite fold.
+- **Why two towers?** A user's outgoing preferences and incoming appeal are different roles. Candidate vectors can be computed once, indexed, and retrieved cheaply by inner product. Compare HNSW with exact search to separate index approximation from model recall.
+- **Why two directional predictions?** The ranker consumes ordered pairs. Swapping the users changes their feature roles and yields a separate estimate of the reverse direction. The product rewards candidates with strong scores in both directions.
+- **What can the experiment tell us?** Ranking metrics use only reciprocally rated held-out pairs, and most evaluated queries have at most ten such candidates. The archive lacks timestamps and preference settings, so evaluation uses a pair split and retrieval assumes opposite-gender eligibility. The service numbers describe sequential requests on one local worker. The experiment provides offline ranking and exposure evidence.
