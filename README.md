@@ -136,3 +136,34 @@ Query cohorts use quartile cutoffs of training likes received across the full us
 | 20–∞ | 5,250 | 0.00080 | -0.00146 |
 
 The 3–7 group had the largest NDCG gain from reciprocal scoring. At α=0.3, the 20-or-more group had the largest drop in NDCG relative to the unpenalized product. These differences describe the observed candidate pool.
+
+## Recommendation API
+
+After preparing the data and training both models, start the local service with Docker Compose. The container mounts the prepared data and model artifacts read-only and publishes the API on the host loopback interface.
+
+```sh
+docker compose up --build -d --wait
+curl http://127.0.0.1:8000/health
+curl 'http://127.0.0.1:8000/recommend/-1?k=10&preferred_gender=F'
+docker compose down
+```
+
+Use a retained user ID in `GET /recommend/{user_id}?k=10&alpha=0.3` for personalized results. It searches the opposite-gender index, excludes candidates previously rated in training, then uses the shared LightGBM scorer and reciprocal product with an exposure penalty. Responses include both directional predictions, the final score, and stage timings. They can contain fewer than `k` items when fewer eligible candidates are available. An unknown ID returns penalized popularity with `fallback: true` and null directional predictions. The optional `preferred_gender` filters that fallback, which otherwise uses the full catalog.
+
+With the container running, execute the benchmark from the host. It samples 1,000 distinct known users with seed 42 and makes sequential requests over a persistent HTTP client after 20 warm-up requests.
+
+```sh
+python -m pip install numpy httpx
+python -m reciprec.serving.benchmark
+```
+
+The report is written to `results/serving.json`. This Windows host to Docker Desktop run used one Uvicorn worker and one thread each for FAISS and LightGBM predictions. The HTTP measurement includes the round trip and response transfer.
+
+| Stage | p50 (ms) | p99 (ms) |
+| --- | ---: | ---: |
+| http | 4.94 | 9.94 |
+| retrieval | 0.54 | 1.49 |
+| features | 0.20 | 0.44 |
+| ranking | 1.79 | 2.50 |
+
+For local service tests, install `.[serving,http-test,test]` and run `python -m pytest tests/test_serving.py`.

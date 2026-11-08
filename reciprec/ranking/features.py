@@ -14,6 +14,13 @@ FEATURE_NAMES = (
 )
 
 
+def load_full_catalog(path, ids, genders, stats, popularity):
+    with np.load(path) as vectors:
+        if not np.array_equal(ids, vectors["user_ids"]) or not np.array_equal(genders, vectors["genders"]):
+            raise ValueError("Retrieval artifacts do not match the prepared user catalog")
+        return FeatureCatalog(stats, popularity, genders, vectors["u_out"], vectors["u_in"])
+
+
 def user_statistics(edges, ratings, liked, n_users):
     src, dst = edges.T
     given = np.bincount(src, minlength=n_users)

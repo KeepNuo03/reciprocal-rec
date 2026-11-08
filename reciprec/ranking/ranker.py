@@ -13,7 +13,9 @@ import torch
 import yaml
 
 from reciprec.eval.ranking import evaluate
-from reciprec.ranking.features import FEATURE_NAMES, FeatureCatalog, pair_folds, user_statistics
+from reciprec.ranking.features import (
+    FEATURE_NAMES, FeatureCatalog, load_full_catalog, pair_folds, user_statistics,
+)
 from reciprec.retrieval.data import (
     edge_rows, evaluation_targets, group_targets, read_edges, read_users, scale_features,
 )
@@ -47,13 +49,6 @@ def cross_fit(edges, ratings, liked, genders, validation, config, seed, device):
             matrix[block] = catalog.matrix(edges[block])
         summaries.append({"held_out_edges": len(indices), "best_tower_epoch": epoch})
     return matrix, summaries
-
-
-def load_full_catalog(path, ids, genders, stats, popularity):
-    with np.load(path) as vectors:
-        if not np.array_equal(ids, vectors["user_ids"]) or not np.array_equal(genders, vectors["genders"]):
-            raise ValueError("Retrieval artifacts do not match the prepared user catalog")
-        return FeatureCatalog(stats, popularity, genders, vectors["u_out"], vectors["u_in"])
 
 
 def fit_ranker(matrix, labels, val_matrix, val_labels, settings, seed, threads):
