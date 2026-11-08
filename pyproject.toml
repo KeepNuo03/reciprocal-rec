@@ -13,6 +13,7 @@ requires-python = ">=3.11"
 data = ["pyspark==3.5.8", "PyYAML>=6,<7"]
 retrieval = ["torch>=2.8,<3", "faiss-cpu>=1.10,<2", "numpy>=1.25,<3", "pyarrow>=18,<25", "PyYAML>=6,<7"]
 ranking = ["lightgbm>=4.7,<5", "scipy>=1.12,<2"]
+analysis = ["matplotlib>=3.9,<4"]
 test = ["pytest>=8,<10"]
 
 [tool.setuptools.packages.find]
