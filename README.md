@@ -105,3 +105,34 @@ The CPU run used 4,750,906 cross-fitted training examples. The best validation A
 | Reciprocal product with exposure penalty | 58.69% | 0.57524 | 0.89217 | 19.25% |
 
 The product increased NDCG@10 by 0.00096 over the one-way ranker and yielded one fewer hit among the 9,960 evaluated users. The short candidate lists leave little headroom in Mutual-Hit@10. At the fixed penalty of 0.3, exposure Gini decreased from 0.89534 to 0.89217 and NDCG@10 decreased to 0.57524.
+
+## Exposure penalty analysis
+
+```sh
+python -m pip install -e '.[retrieval,ranking,analysis]'
+python -m reciprec.eval.exposure
+```
+
+The sweep reuses the saved ranker and the same known-label test pool. It writes `results/exposure.json` and `results/exposure_tradeoff.png`. The table describes sensitivity on this test pool.
+
+| α | Mutual-Hit@10 | NDCG@10 | Exposure Gini | Coverage |
+| ---: | ---: | ---: | ---: | ---: |
+| 0.0 | 58.6847% | 0.57613 | 0.89534 | 18.97% |
+| 0.1 | 58.6847% | 0.57587 | 0.89326 | 19.14% |
+| 0.2 | 58.6847% | 0.57555 | 0.89270 | 19.19% |
+| 0.3 | 58.6948% | 0.57524 | 0.89217 | 19.25% |
+| 0.4 | 58.6948% | 0.57432 | 0.89167 | 19.30% |
+| 0.5 | 58.6948% | 0.57363 | 0.89125 | 19.35% |
+
+Increasing α from 0 to 0.5 lowered exposure Gini by 0.00409 and increased coverage by 0.38 percentage points. NDCG@10 fell by 0.00251. The difference in Mutual-Hit@10 amounts to one additional user with a hit.
+
+Query cohorts use quartile cutoffs of training likes received across the full user catalog, keeping ties together. The counts below cover the 9,960 evaluated queries.
+
+| Training likes received | Queries | NDCG change, product vs. one-way | NDCG change, α=0.3 vs. product |
+| --- | ---: | ---: | ---: |
+| 0–2 | 962 | 0.00025 | 0.00014 |
+| 3–7 | 1,426 | 0.00186 | 0.00031 |
+| 8–19 | 2,322 | 0.00107 | -0.00077 |
+| 20–∞ | 5,250 | 0.00080 | -0.00146 |
+
+The 3–7 group had the largest NDCG gain from reciprocal scoring. At α=0.3, the 20-or-more group had the largest drop in NDCG relative to the unpenalized product. These differences describe the observed candidate pool.

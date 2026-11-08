@@ -71,9 +71,7 @@ def fit_ranker(matrix, labels, val_matrix, val_labels, settings, seed, threads):
     )
 
 
-def run(prepared, retrieval, output, config, device, threads):
-    seed = config["split"]["seed"]
-    settings = config["ranking"]
+def read_training(prepared):
     ids, genders, _ = read_users(prepared / "user_features")
     train = pq.read_table(prepared / "train", columns=["src", "dst", "rating", "liked"])
     edges = edge_rows(train, ids)
@@ -81,6 +79,13 @@ def run(prepared, retrieval, output, config, device, threads):
     liked = train["liked"].to_numpy() == 1
     del train
     stats, popularity = user_statistics(edges, ratings, liked, len(ids))
+    return ids, genders, edges, ratings, liked, stats, popularity
+
+
+def run(prepared, retrieval, output, config, device, threads):
+    seed = config["split"]["seed"]
+    settings = config["ranking"]
+    ids, genders, edges, ratings, liked, stats, popularity = read_training(prepared)
     catalog = load_full_catalog(retrieval / "embeddings.npz", ids, genders, stats, popularity)
     validation = read_edges(prepared / "val", ids)
     matrix, folds = cross_fit(edges, ratings, liked, genders, validation, config["retrieval"], seed, device)
